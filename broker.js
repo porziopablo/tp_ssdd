@@ -5,9 +5,9 @@ const zmq = require('zeromq');
 const fs = require('fs');
 
 
-const OK = 0, TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2;
-const HEARTBEAT = "heartbeat";
-const NUEVO_TOP = 3, MOSTRAR_TOP = 4, MOSTRAR_MSJ = 5, BORRAR_MSJ = 6;
+const OK = 0, TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2; /* CODIGOS DE ERROR */
+const HEARTBEAT = "heartbeat"; /* TOPICOS */
+const NUEVO_TOP = 3, MOSTRAR_TOP = 4, MOSTRAR_MSJ = 5, BORRAR_MSJ = 6; /* OPERACIONES */
 
 const subSocket = zmq.socket('xsub'), pubSocket = zmq.socket('xpub'), responder = zmq.socket('rep');
 
@@ -50,9 +50,12 @@ function almacenarMensaje(topico, mensaje) {
 }
 
 subSocket.on('message', function (topico, mensaje) {
-    if (colaMensajes.has(topico)) {
-        if (topico != HEARTBEAT)
-            almacenarMensaje(topico, JSON.parse(mensaje));
+    const topicoString = topico.toString();
+
+    console.log(`Mensaje recibido: Topico: ${topicoString} - Mensaje: `, JSON.parse(mensaje));
+    if (colaMensajes.has(topicoString)) {
+        if (topicoString != HEARTBEAT)
+            almacenarMensaje(topicoString, JSON.parse(mensaje));
         pubSocket.send([topico, mensaje]);
     }
 })
@@ -61,7 +64,7 @@ subSocket.on('message', function (topico, mensaje) {
 
 function nuevoTopico(topico) {
     colaMensajes.set(topico, new Set());
-    subSocket.send(topico); /* para suscribirse al nuevo tópico */
+    subSocket.send(String.fromCharCode(1) + topico); /* se suscribe al nuevo tÃ³pico, usa ASCII = 1 adelante porque lo requiere ZMQ */   
 
     return { code: OK };
 }
