@@ -34,7 +34,7 @@ class Reloj {
 
             const client = new net.Socket();
 
-            client.connect(SERVER_PORT, SERVER_IP, function () {
+            client.connect(this.puerto, this.ip, function () {
                 const T1 = (new Date()).getTime().toString();  /* tiempo de envío del cliente */
                 client.write(T1);
             });
