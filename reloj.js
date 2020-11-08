@@ -8,19 +8,19 @@ class Reloj {
         this.offset = 0;
     }
 
-    get ip() {
+    get getIp() {
         return this.ip;
     }
 
-    get puerto() {
+    get getPuerto() {
         return this.puerto;
     }
 
-    get periodo() {
+    get getPeriodo() {
         return this.periodo;
     }
 
-    get offset() {
+    get getOffset() {
         return this.offset;
     }
 
@@ -62,4 +62,4 @@ class Reloj {
 
 }
 
-module.exports.Reloj
+module.exports = Reloj
