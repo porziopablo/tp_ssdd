@@ -1,17 +1,47 @@
 const zmq = require('zeromq');
+const fs = require('fs');
 
 const OK = 0, TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2; /* CODIGOS DE ERROR */
 const HEARTBEAT = "heartbeat"; /* TOPICOS */
 const NUEVO_TOP = 3, MOSTRAR_TOP = 4, MOSTRAR_MSJ = 5, BORRAR_MSJ = 6; /* OPERACIONES */
 
 const subSocket = zmq.socket('xsub'), pubSocket = zmq.socket('xpub'), responder = zmq.socket('rep');
+
 const colaMensajes = new Map();
 
-// SOLO PARA TESTEAR
-subSocket.bindSync('tcp://127.0.0.1:3000');
-pubSocket.bindSync('tcp://127.0.0.1:3001');
-responder.bind('tcp://*:5555');
-// BORRAR LO DE BIND
+var BROKER_ID;
+const configBroker = 'config_broker.txt';
+const configBrokerCod = 'utf8';
+var puertoREP, puertoSUB, puertoPUB;
+var ipNTP, puertoNTP, periodoReloj;
+var reloj;
+
+/*INICIO*/
+
+function arranque() {
+    BROKER_ID = process.argv[2];
+
+    fs.readFile(configBroker, configBrokerCod, function (err, data) {
+        if (err) {
+            console.log(err);
+        }
+
+        let vec = data.split("\r\n");
+        puertoREP = vec[0];
+        puertoPUB = vec[1];
+        puertoSUB = vec[2];
+        ipNTP = vec[3];
+        puertoNTP = vec[4];
+        periodoReloj = vec[5];
+    
+        reloj = new Reloj(ipNTP, puertoNTP, periodoReloj);  //CREO INSTANCIA DE RELOJ
+     
+        responder.bind('tcp://*:' + puertoREP);
+        subSocket.bindSync('tcp://*:' +puertoSUB);
+        pubSocket.bindSync('tcp://*:' + puertoPUB);
+        console.log(puertoREP);
+    });
+}
 
 /* METODOS INTERFAZ A: BROKER <==> CLIENTE */
 
@@ -85,3 +115,5 @@ responder.on('message', function (request) {
         
     responder.send(JSON.stringify(respuesta));
 });
+
+arranque();
