@@ -1,0 +1,8 @@
+{
+	"puertoREP": "10",
+	"puertoPUB": "20",
+	"puertoSUB": "30",
+	"ipNTP": "1.2.3.4",
+	"puertoNTP": "10",
+	"periodoReloj": 2000
+}
