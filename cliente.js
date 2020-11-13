@@ -1,5 +1,5 @@
 const readline = require('readline');
-//const Mediador = require('./mediador.js');
+const Mediador = require('./mediador.js');
 
 const ID_CLIENTE = process.argv[2];
 
@@ -9,6 +9,8 @@ const ESCRIBIR_MSJ = "write";
 const ESCRIBIR_EN_GRUPO = "writegroup";
 const UNIRSE_GRUPO = "group";
 
+const listaSockets = new Map();
+const cacheBroker = new Map();
 var reloj;
 
 const rl = readline.createInterface({
@@ -87,22 +89,30 @@ async function write(comandoAct) {
     nuevaOperacionConsola();
 }
 
-async function grupo(idGrupo) {
-    /*
-    const request = {
-        "idPeticion": id, //VER QUE ID PONGO ACA
-        "accion": "7",
-        "topico": "idGrupo",
-    }
-    
-    await mediador.pedirAlCoord(request, (respuesta) => {
-        //CALL BACK GRUPO MQNA
-    }); 
+function grupo(idGrupo) {
+
+    /* const request = {
+         "idPeticion": "" // este valor se setea en el mediador
+         "accion": "7",
+         "topico": "idGrupo",
+     }
     */
+
+    function callbackGrupo(respuesta) {
+        const rtaCoord = JSON.parse(respuesta);
+
+    }
+
+    mediador.pedirAlCoord(request, callbackGrupo);
+
     nuevaOperacionConsola();
-} 
+}
 
-
+function enviarMensaje(broker, topico, mensaje) {
+    const socket = zmq.socket('pub');
+    socket.connect(`tcp://${broker.ip}:${broker.puerto}`);
+    socket.send([topico, JSON.stringify(mensaje)]);
+}
 
 console.log('\x1b[33m%s\x1b[0m', "Bienvenido " + ID_CLIENTE + "!.");
 nuevaOperacionConsola();
