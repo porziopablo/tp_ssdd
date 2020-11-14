@@ -1,6 +1,7 @@
 const Reloj = require('./reloj.js');
 const ColaMensajes = require('./colaMensajes.js');
 const zmq = require('zeromq');
+const ListaConectados = require('./listaConectados.js');
 const configBroker = require('./config_broker.json');
 
 const TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2; /* CODIGOS DE ERROR */
@@ -24,7 +25,8 @@ function arranque() {
 
     reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj);  //CREO INSTANCIA DE RELOJ
     colaMensajes = new ColaMensajes(configBroker.periodoCola, configBroker.tamMaxCola, configBroker.plazoMaxCola, reloj);
-     
+    listaConectados = new ListaConectados(reloj, configBroker.plazoMaxHeart, configBroker.periodoListaHeart);
+
     responder.bind('tcp://*:' + configBroker.puertoREP);
     subSocket.bindSync('tcp://*:' + configBroker.puertoSUB);
     pubSocket.bindSync('tcp://*:' + configBroker.puertoPUB);
@@ -55,7 +57,7 @@ subSocket.on('message', function (topicoBytes, mensaje) {
     else {
         heartbeat = JSON.parse(mensaje);
         topicoCliente = PREFIJO + heartbeat.emisor;
-        if (listaConectados.almacenarHeartbeat(heartbeat)) {   // es alguien recien conectado
+        if (listaConectados.actualizarHeartbeat(heartbeat)) {   // es alguien recien conectado
 
             if (colaMensajes.responsableTopico(ALL))           // el broker lo pone al tanto si es responsable de ALL
                 enviarMensajesAnteriores(ALL, topicoCliente);
