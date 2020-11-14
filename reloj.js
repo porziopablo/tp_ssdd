@@ -6,6 +6,7 @@ class Reloj {
         this.puerto = puerto;
         this.periodo = periodo;
         this.offset = 0;
+        this.actualizarTiempo();
     }
 
     get getIp() {
@@ -31,29 +32,31 @@ class Reloj {
 
     actualizarTiempo() {
 
-        var funcionIntervalo = setInterval(function () {
+        const self = this;
+        setInterval(function () {
             const client = new net.Socket();
 
-            client.connect(this.puerto, this.ip, function () {
-                const T1 = { "t1": (new Date().toISOString()) }; 
+            console.log(`Reloj: actualizando tiempo con Servidor NTP en ${self.ip}:${self.puerto}`);
+
+            client.connect(self.puerto, self.ip, function () {
+                const T1 = { t1: new Date().toISOString() }; 
                 client.write(JSON.stringify(T1));
             });
 
-            client.on('data', function (respuesta) {
-                const T4 = (new Date()).getTime(); 
-                const tiempos = respuesta.toString().split(',');
+            client.on('data', function (data) {
+                const T4 = new Date().getTime(); 
+                const respuesta = JSON.parse(data);
 
-                const T1 = Date.parse(tiempos[0]);
-                const T2 = Date.parse(tiempos[1]);
-                const T3 = Date.parse(tiempos[2]);
+                const T1 = new Date(respuesta.t1).getTime();
+                const T2 = new Date(respuesta.t2).getTime();
+                const T3 = new Date(respuesta.t3).getTime();
 
-                const offset = ((T2 - T1) + (T3 - T4)) / 2;
-                this.offset = offset;
+                self.offset = ((T2 - T1) + (T3 - T4)) / 2;
+                console.log(`Reloj: offset con Servidor NTP: ${self.offset} ms.`)
                 client.destroy();
             });
 
-        }, this.periodo);
-        funcionIntervalo();
+        }, self.periodo);
     }
 
 

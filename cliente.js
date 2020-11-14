@@ -1,6 +1,9 @@
 const readline = require('readline');
 const Mediador = require('./mediador.js');
 const AlmacenMensajes = require('./almacenMensajes.js');
+const Reloj = require('./reloj.js');
+
+const configCliente = require('./config_cliente.json');
 
 const ID_CLIENTE = process.argv[2];
 
@@ -10,15 +13,61 @@ const ESCRIBIR_MSJ = "write";
 const ESCRIBIR_EN_GRUPO = "writegroup";
 const UNIRSE_GRUPO = "group";
 
-
+const TOPICO_HB = "heartbeat";
 const TOPICO_ALL = "message/all";
 
+const socketAll = zmq.socket('sub'), socketHeartbeat = zmq.socket('sub'), socketCliente = zmq.socket('sub');
 
 const listaSockets = new Map(); //estos new no deberian ir adentro de arranque?
 const cacheBroker = new Map();
+var ipBrokerAll, ipBrokerHB, puertoBrokerAll, puertoBrokerHB, ipBrokerCliente, puertoBrokerCliente;
 var reloj;
 var almacenMensajes;
+var mediador;
 
+
+async function arranque() {
+
+    console.log('\x1b[33m%s\x1b[0m', "Bienvenido " + ID_CLIENTE + "!.");
+
+    reloj = new Reloj(configCliente.ipNTP, configCliente.puertoNTP, configCliente.periodoReloj);
+    mediador = new Mediador(configCliente.ipCoordinador, configCliente.puertoCoordinador);
+
+    const msjInicioSesion = {
+        "idPeticion": "",
+        "accion": "2",
+        "topico": ID_CLIENTE
+    }
+
+    let respuestaSesion = await mediador.iniciarSesion(msjInicioSesion);
+
+    if (respuestaSesion.exito) {
+
+        ipBrokerAll = respuestaSesion.resultados.datosBroker[0].ip;
+        puertoBrokerAll = respuestaSesion.resultados.datosBroker[0].puerto;
+        ipBrokerHB = respuestaSesion.resultados.datosBroker[1].ip;
+        puertoBrokerHB = respuestaSesion.resultados.datosBroker[1].puerto;
+        ipBrokerCliente = respuestaSesion.resultados.datosBroker[2].ip;
+        puertoBrokerCliente = respuestaSesion.resultados.datosBroker[2].puerto;
+
+        socketAll.connect('tcp://' + ipBrokerAll + puertoBrokerAll);
+        socketAll.subscribe(respuestaSesion.resultados.datosBroker[0].topico);
+        socketHeartbeat.connect('tcp://' + ipBrokerHB + puertoBrokerHB);
+        socketHeartbeat.subscribe(respuestaSesion.resultados.datosBroker[1].topico);
+        socketCliente.connect('tcp://' + ipBrokerCliente + puertoBrokerCliente);
+        socketCliente.subscribe(respuestaSesion.resultados.datosBroker[2].topico);
+
+        socketAll.on('message', recibirMensaje);
+        socketHeartbeat.on('message', recibirHB);
+        socketCliente.on('message', recibirMensaje);
+
+        setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
+    }
+    else {
+        //hay que ver si se agrega algun error que pueda llegar aca.
+    }
+    
+}
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -38,7 +87,10 @@ rl.on('line', function (comando) {
         }
         else
         if (comandoAct[0] === ESCRIBIR_EN_GRUPO){
-            //parte de ivan
+
+
+
+
             nuevaOperacionConsola();
         }
         else
@@ -103,17 +155,25 @@ function grupo(idGrupo) {
          "topico": "message/"+idGrupo,
     }
 
-    function callbackGrupo(respuesta) {
-        const rtaCoord = JSON.parse(respuesta);
-        if (rtaCoord.grupoNuevo == 'true') {
+    function callbackGrupo(rtaCoord) {
+        if (rtaCoord.grupoNuevo == true) {
             logearTexto("El grupo se ha creado correctamente!"); //que pasa si tiro error?
         }
         else {
             logearTexto("Se lo ha agregado al grupo correctamente!");
         }
+
+        const brokerGrupo = rtaCoord.resultados.datosBroker[0];
+        cacheBroker.set(idGrupo, { ip: brokerGrupo.ip, puerto: brokerGrupo.puerto });
+
+        const socket = zmq.socket('sub');
+        socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
+        socket.on("message", recibirMensaje);
+        listaSockets.set(idGrupo, socket); // agrego el socket a la lista de grupos
     }
+
     logearTexto("Solicitando operacion...");
-    mediador.pedirAlCoord(request, callbackGrupo);
+    Mediador.pedirAlCoord(request, callbackGrupo);
     nuevaOperacionConsola();
 }
 
@@ -170,6 +230,24 @@ function recibirMensaje(topico, mensaje){
     logearTexto("[" + topico + " | " + mensaje.emisor + " | " + mensaje.fecha + " | " + mensaje.mensaje + "]"); //quiza convenga recortar un poco la fecha
 }
 
-//esto deberia ir en arranque creo:
-console.log('\x1b[33m%s\x1b[0m', "Bienvenido " + ID_CLIENTE + "!.");
+
+function recibirHB(topico, mensaje) {
+
+}
+
+function emitirHeartbeat() {
+    const brokerHB = {
+        "ip": ipBrokerHB,
+        "puerto": puertoBrokerHB
+    }
+
+    var msjHB = {
+        "emisor": ID_CLIENTE,
+        "fecha": reloj.solicitarTiempo().toISOString()
+    }
+
+    enviarMensaje(brokerHB, TOPICO_HB, msjHB);
+}
+
+arranque();
 nuevaOperacionConsola();

@@ -15,7 +15,22 @@ class ColaMensajes {
     }
 
     obtenerTopicos() {
-        return Array.from(this.cola.keys());
+        let topicos = Array.from(this.cola.keys()); 
+
+        topicos = topicos.sort(function (string1, string2) {
+            const topico1 = string1.toLowerCase();
+            const topico2 = string2.toLowerCase();
+            let orden = 0;
+
+            if (topico1 < topico2)
+                orden = -1;
+            else if (topico1 > topico2)
+                orden = 1;
+
+            return orden;
+        });
+
+        return topicos;
     }
 
     obtenerMensajes(topico) {
@@ -42,8 +57,8 @@ class ColaMensajes {
         let almacenado = false;
 
         if (this.cola.has(topico) && ! this.esViejo(mensaje)) {
-            let colaTopico = this.get(topico);
-            if (colaTopico.length + 1 > this.tamMaxCola) {
+            let colaTopico = this.cola.get(topico);
+            if (colaTopico.length === this.tamMaxCola) {
                 colaTopico.shift();
             }
             colaTopico.push(mensaje);
@@ -69,6 +84,9 @@ class ColaMensajes {
         
         const self = this;
         const eliminar = function () {
+
+            console.log("Cola de Mensajes: borrando mensajes viejos...");
+
             const iterator = self.cola.entries();
             let proximo = iterator.next();
             let cola;

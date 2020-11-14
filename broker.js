@@ -1,6 +1,7 @@
 const Reloj = require('./reloj.js');
 const ColaMensajes = require('./colaMensajes.js');
 const zmq = require('zeromq');
+const ListaConectados = require('./listaConectados.js');
 const configBroker = require('./config_broker.json');
 
 const TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2; /* CODIGOS DE ERROR */
@@ -9,20 +10,22 @@ const NUEVO_TOP = 3, MOSTRAR_TOP = 4, MOSTRAR_MSJ = 5, BORRAR_MSJ = 6; /* OPERAC
 
 const subSocket = zmq.socket('xsub'), pubSocket = zmq.socket('xpub'), responder = zmq.socket('rep');
 
-let BROKER_ID;
+const BROKER_ID = process.argv[2];
 let reloj;
 let colaMensajes;
 
 /* INICIO */
 
 function arranque() {
-    BROKER_ID = process.argv[2];
 
     console.log(`Arrancando broker con ID = ${BROKER_ID}...`);
+    console.log("Usando configuracion: ", configBroker);
+
 
     reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj);  //CREO INSTANCIA DE RELOJ
     colaMensajes = new ColaMensajes(configBroker.periodoCola, configBroker.tamMaxCola, configBroker.plazoMaxCola, reloj);
-     
+    listaConectados = new ListaConectados(reloj, configBroker.plazoMaxHeart, configBroker.periodoListaHeart);
+
     responder.bind('tcp://*:' + configBroker.puertoREP);
     subSocket.bindSync('tcp://*:' + configBroker.puertoSUB);
     pubSocket.bindSync('tcp://*:' + configBroker.puertoPUB);
@@ -47,11 +50,13 @@ subSocket.on('message', function (topicoBytes, mensaje) {
     if (topico != HEARTBEAT) {
         if (colaMensajes.almacenarMensaje(topico, JSON.parse(mensaje)))
             pubSocket.send([topico, mensaje]);
+        else
+            console.log("Mensaje descartado");
     }
     else {
         heartbeat = JSON.parse(mensaje);
         topicoCliente = PREFIJO + heartbeat.emisor;
-        if (listaConectados.almacenarHeartbeat(heartbeat)) {   // es alguien recien conectado
+        if (listaConectados.actualizarHeartbeat(heartbeat)) {   // es alguien recien conectado
 
             if (colaMensajes.responsableTopico(ALL))           // el broker lo pone al tanto si es responsable de ALL
                 enviarMensajesAnteriores(ALL, topicoCliente);
@@ -98,16 +103,19 @@ responder.on('message', function (solicitudJSON) {
     let resultados = {}, error = {};
     let exito = true;
     
-    switch (solicitud.accion) {
+    switch (parseInt(solicitud.accion)) {
         case NUEVO_TOP:
             nuevoTopico(solicitud.topico); break;
         case MOSTRAR_TOP:
             resultados = { listaTopicos: colaMensajes.obtenerTopicos() }; break;
         case MOSTRAR_MSJ:
-            resultados = { mensajes: colaMensajes.obtenerMensajes(topico) };
-            if ((resultados.mensajes.length == 0) && (solicitud.topico != HEARTBEAT)) {
+            if (colaMensajes.responsableTopico(solicitud.topico)) {
+                resultados = { mensajes: colaMensajes.obtenerMensajes(solicitud.topico) };
+            }
+            else {
                 exito = false;
                 error = nuevoError(TOP_INEXISTENTE);
+                resultados = { mensajes: [] };
             }
             break;
         case BORRAR_MSJ:
