@@ -22,7 +22,7 @@ function arranque() {
     console.log("Usando configuracion: ", configBroker);
 
 
-    reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj);  //CREO INSTANCIA DE RELOJ
+    reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj, "true");  //CREO INSTANCIA DE RELOJ
     colaMensajes = new ColaMensajes(configBroker.periodoCola, configBroker.tamMaxCola, configBroker.plazoMaxCola, reloj);
     listaConectados = new ListaConectados(reloj, configBroker.plazoMaxHeart, configBroker.periodoListaHeart);
 
