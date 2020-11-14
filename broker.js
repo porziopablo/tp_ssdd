@@ -1,104 +1,132 @@
-const Reloj = require('./reloj.js')
-
+const Reloj = require('./reloj.js');
+const ColaMensajes = require('./colaMensajes.js');
 const zmq = require('zeromq');
-
 const configBroker = require('./config_broker.json');
 
-const OK = 0, TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2; /* CODIGOS DE ERROR */
-const HEARTBEAT = "heartbeat"; /* TOPICOS */
+const TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2; /* CODIGOS DE ERROR */
+const HEARTBEAT = "heartbeat", ALL = "message/all", PREFIJO = "message/"; /* TOPICOS */
 const NUEVO_TOP = 3, MOSTRAR_TOP = 4, MOSTRAR_MSJ = 5, BORRAR_MSJ = 6; /* OPERACIONES */
 
 const subSocket = zmq.socket('xsub'), pubSocket = zmq.socket('xpub'), responder = zmq.socket('rep');
 
-const colaMensajes = new Map();
+let BROKER_ID;
+let reloj;
+let colaMensajes;
 
-var BROKER_ID;
-var reloj;
-
-/*INICIO*/
+/* INICIO */
 
 function arranque() {
     BROKER_ID = process.argv[2];
-    
+
+    console.log(`Arrancando broker con ID = ${BROKER_ID}...`);
+    console.log("Usando configuracion: ", configBroker);
+
+
     reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj);  //CREO INSTANCIA DE RELOJ
+    colaMensajes = new ColaMensajes(configBroker.periodoCola, configBroker.tamMaxCola, configBroker.plazoMaxCola, reloj);
      
     responder.bind('tcp://*:' + configBroker.puertoREP);
     subSocket.bindSync('tcp://*:' + configBroker.puertoSUB);
     pubSocket.bindSync('tcp://*:' + configBroker.puertoPUB);
-   
+
+    subSocket.send(String.fromCharCode(1) + HEARTBEAT); // se suscribe a heartbeat
 }
 
-/* METODOS INTERFAZ A: BROKER <==> CLIENTE */
+/* METODO INTERFAZ A: BROKER <==> CLIENTE */
 
-function almacenarMensaje(topico, mensaje) {
-    colaMensajes.get(topico).add(mensaje);
+function enviarMensajesAnteriores(topicoMsj, topicoCliente) {
+    const mensajes = colaMensajes.obtenerMensajes(topicoMsj);
+
+    mensajes.forEach((msj) => { pubSocket.send([topicoCliente, JSON.stringify(msj)]) });
 }
 
-subSocket.on('message', function (topico, mensaje) {
-    const topicoString = topico.toString();
+subSocket.on('message', function (topicoBytes, mensaje) {
+    const topico = topicoBytes.toString();
+    let heartbeat = {}, topicoCliente = "";
 
-    console.log(`Mensaje recibido: Topico: ${topicoString} - Mensaje: `, JSON.parse(mensaje));
-    if (colaMensajes.has(topicoString)) {
-        if (topicoString != HEARTBEAT)
-            almacenarMensaje(topicoString, JSON.parse(mensaje));
-        pubSocket.send([topico, mensaje]);
+    console.log(`Mensaje recibido: Topico: ${topico} - Mensaje: `, JSON.parse(mensaje));
+
+    if (topico != HEARTBEAT) {
+        if (colaMensajes.almacenarMensaje(topico, JSON.parse(mensaje)))
+            pubSocket.send([topico, mensaje]);
+        else
+            console.log("Mensaje descartado");
+    }
+    else {
+        heartbeat = JSON.parse(mensaje);
+        topicoCliente = PREFIJO + heartbeat.emisor;
+        if (listaConectados.almacenarHeartbeat(heartbeat)) {   // es alguien recien conectado
+
+            if (colaMensajes.responsableTopico(ALL))           // el broker lo pone al tanto si es responsable de ALL
+                enviarMensajesAnteriores(ALL, topicoCliente);
+
+            if (colaMensajes.responsableTopico(topicoCliente)) // el broker lo pone al tanto si es responsable de su topico
+                enviarMensajesAnteriores(topicoCliente, topicoCliente);
+        }
+        if (colaMensajes.responsableTopico(HEARTBEAT)) //si el broker es responsable de HEARTBEAT, publica el msj
+            pubSocket.send([topico, mensaje]);
     }
 })
 
 /* METODOS INTERFAZ B: BROKER <==> COORDINADOR/SERVIDOR HTTP */
 
 function nuevoTopico(topico) {
-    colaMensajes.set(topico, new Set());
-    subSocket.send(String.fromCharCode(1) + topico); /* se suscribe al nuevo tópico, usa ASCII = 1 adelante porque lo requiere ZMQ */   
-
-    return { code: OK };
+    colaMensajes.nuevoTopico(topico);
+    subSocket.send(String.fromCharCode(1) + topico);
+    /* se suscribe al nuevo tópico, usa ASCII = 1 adelante porque lo requiere ZMQ */
 }
 
-function mostrarTopicos() {
-    return { listaTopicos: Array.from(colaMensajes.keys()) };
+function Respuesta(exito, accion, idPeticion, resultados, error) {
+    this.exito = exito;
+    this.accion = accion;
+    this.idPeticion = idPeticion;
+    this.resultados = resultados;
+    this.error = error;
 }
 
-function mostrarMensajes(topico) {
-    let mensajes = [];
+function nuevoError(codigo) {
+    let descripcion = "";
 
-    if (colaMensajes.has(topico)) {
-        mensajes = Array.from(colaMensajes.get(topico).values());
+    switch (codigo) {
+        case TOP_INEXISTENTE:
+            descripcion = "topico inexistente"; break;
+        case OP_INEXISTENTE:
+            descripcion = "operacion inexistente"; break;
     }
 
-    return { mensajes: mensajes };
+    return { codigo: codigo, descripcion: descripcion };
 }
 
-function borrarMensajes(topico) {
-    let respuesta;
-
-    if (colaMensajes.has(topico)) {
-        colaMensajes.get(topico).clear();
-        respuesta = { code: OK };
-    }
-    else
-        respuesta = { code: TOP_INEXISTENTE };
-
-    return respuesta;
-}
-
-responder.on('message', function (request) {
-    const solicitud = JSON.parse(request);
-    let respuesta;
+responder.on('message', function (solicitudJSON) {
+    const solicitud = JSON.parse(solicitudJSON);
+    let resultados = {}, error = {};
+    let exito = true;
     
-    switch (solicitud.accion) {
+    switch (parseInt(solicitud.accion)) {
         case NUEVO_TOP:
-            respuesta = nuevoTopico(solicitud.topico); break;
+            nuevoTopico(solicitud.topico); break;
         case MOSTRAR_TOP:
-            respuesta = mostrarTopicos(); break;
+            resultados = { listaTopicos: colaMensajes.obtenerTopicos() }; break;
         case MOSTRAR_MSJ:
-            respuesta = mostrarMensajes(solicitud.topico); break;
+            if (colaMensajes.responsableTopico(solicitud.topico)) {
+                resultados = { mensajes: colaMensajes.obtenerMensajes(solicitud.topico) };
+            }
+            else {
+                exito = false;
+                error = nuevoError(TOP_INEXISTENTE);
+                resultados = { mensajes: [] };
+            }
+            break;
         case BORRAR_MSJ:
-            respuesta = borrarMensajes(solicitud.topico); break;
+            exito = colaMensajes.borrarMensajes(solicitud.topico);
+            if (!exito)
+                error = nuevoError(TOP_INEXISTENTE);
+            break;
         default:
-            respuesta = { code: OP_INEXISTENTE };
+            exito = false; error = nuevoError(OP_INEXISTENTE);
     }
         
-    responder.send(JSON.stringify(respuesta));
+    responder.send(JSON.stringify(new Respuesta(exito, solicitud.accion, solicitud.idPeticion, resultados, error)));
 });
 
 arranque();
