@@ -249,8 +249,15 @@ function grupo(idGrupo) {
 
 function enviarMensaje(broker, topico, mensaje) {
     const socket = zmq.socket('pub');
+
     socket.connect(`tcp://${broker.ip}:${broker.puerto}`);
-    socket.send([topico, JSON.stringify(mensaje)]);
+
+    socket.on('connect', function (fd, ep) {
+        socket.send([topico, JSON.stringify(mensaje)]);
+        sock.unmonitor();
+        sock.close();
+    });
+    sock.monitor(100, 0);
 }
 
 function prepararMensaje(idReceptor, stringMensaje) {
