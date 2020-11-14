@@ -38,6 +38,8 @@ function arranque() {
 function enviarMensajesAnteriores(topicoMsj, topicoCliente) {
     const mensajes = colaMensajes.obtenerMensajes(topicoMsj);
 
+    console.log(`Poniendo al dia a: ${topicoCliente} con ${topicoMsj}`);
+
     mensajes.forEach((msj) => { pubSocket.send([topicoCliente, JSON.stringify(msj)]) });
 }
 
