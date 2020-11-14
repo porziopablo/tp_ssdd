@@ -9,14 +9,13 @@ const NUEVO_TOP = 3, MOSTRAR_TOP = 4, MOSTRAR_MSJ = 5, BORRAR_MSJ = 6; /* OPERAC
 
 const subSocket = zmq.socket('xsub'), pubSocket = zmq.socket('xpub'), responder = zmq.socket('rep');
 
-let BROKER_ID;
+const BROKER_ID = process.argv[2];
 let reloj;
 let colaMensajes;
 
 /* INICIO */
 
 function arranque() {
-    BROKER_ID = process.argv[2];
 
     console.log(`Arrancando broker con ID = ${BROKER_ID}...`);
     console.log("Usando configuracion: ", configBroker);
