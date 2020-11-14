@@ -22,7 +22,7 @@ class ListaConectados {
         const self = this;
 
         const estaDesconectado = function (cliente) {
-            const diferencia = self.relojNTP.solicitarTiempo() - new Date(cliente.fecha).getTime();
+            const diferencia = self.reloj.solicitarTiempo() - new Date(cliente.fecha).getTime();
             cliente.online = diferencia <= self.plazoMax;
         }
 
