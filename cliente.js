@@ -2,6 +2,7 @@ const readline = require('readline');
 const Mediador = require('./mediador.js');
 const AlmacenMensajes = require('./almacenMensajes.js');
 const Reloj = require('./reloj.js');
+const ListaConectados = require('./listaConectados.js');
 
 const configCliente = require('./config_cliente.json');
 
@@ -24,6 +25,7 @@ var ipBrokerAll, ipBrokerHB, puertoBrokerAll, puertoBrokerHB, ipBrokerCliente, p
 var reloj;
 var almacenMensajes;
 var mediador;
+var listaConectados;
 
 
 async function arranque() {
@@ -32,6 +34,8 @@ async function arranque() {
 
     reloj = new Reloj(configCliente.ipNTP, configCliente.puertoNTP, configCliente.periodoReloj);
     mediador = new Mediador(configCliente.ipCoordinador, configCliente.puertoCoordinador);
+    almacenMensajes = new AlmacenMensajes(ID_CLIENTE);
+    listaConectados = new ListaConectados(reloj, configCliente.plazoMaxHeart, configCliente.periodoListaHeart);
 
     const msjInicioSesion = {
         "idPeticion": "",
@@ -88,8 +92,7 @@ rl.on('line', function (comando) {
         else
         if (comandoAct[0] === ESCRIBIR_EN_GRUPO){
 
-
-
+            perteneceAGrupo(comandoAct);
 
             nuevaOperacionConsola();
         }
@@ -111,6 +114,24 @@ rl.on('line', function (comando) {
         rl.close();
     }
 });
+
+function perteneceAGrupo(comandoAct) {
+    const topico = comandoAct[1];
+
+    if (cacheBroker.has(topico)) {
+        let mensaje = await preguntar("Mensaje: ");
+        if (mensaje === "") {
+            logearError("No se puede enviar un mensaje vacio!")
+        }
+        else {
+            prepararMensaje("message/"+topico, mensaje);
+        }
+    }
+    else {
+        logearError("Usted no pertenece al grupo al que quiere escribir.");
+    }
+
+}
 
 function logearError(mensaje) {
     console.log("\033[31m" + mensaje + "\x1b[37m")
@@ -155,25 +176,17 @@ function grupo(idGrupo) {
          "topico": "message/"+idGrupo,
     }
 
-    function callbackGrupo(rtaCoord) {
-        if (rtaCoord.grupoNuevo == true) {
+    function callbackGrupo(respuesta) {
+        const rtaCoord = JSON.parse(respuesta);
+        if (rtaCoord.grupoNuevo == 'true') {
             logearTexto("El grupo se ha creado correctamente!"); //que pasa si tiro error?
         }
         else {
             logearTexto("Se lo ha agregado al grupo correctamente!");
         }
-
-        const brokerGrupo = rtaCoord.resultados.datosBroker[0];
-        cacheBroker.set(idGrupo, { ip: brokerGrupo.ip, puerto: brokerGrupo.puerto });
-
-        const socket = zmq.socket('sub');
-        socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
-        socket.on("message", recibirMensaje);
-        listaSockets.set(idGrupo, socket); // agrego el socket a la lista de grupos
     }
-
     logearTexto("Solicitando operacion...");
-    Mediador.pedirAlCoord(request, callbackGrupo);
+    mediador.pedirAlCoord(request, callbackGrupo);
     nuevaOperacionConsola();
 }
 
@@ -232,7 +245,8 @@ function recibirMensaje(topico, mensaje){
 
 
 function recibirHB(topico, mensaje) {
-
+    const msjHB = JSON.parse(mensaje);
+    listaConectados.actualizarHeartbeat(msjHB);
 }
 
 function emitirHeartbeat() {
@@ -241,7 +255,7 @@ function emitirHeartbeat() {
         "puerto": puertoBrokerHB
     }
 
-    var msjHB = {
+    const msjHB = {
         "emisor": ID_CLIENTE,
         "fecha": reloj.solicitarTiempo().toISOString()
     }
