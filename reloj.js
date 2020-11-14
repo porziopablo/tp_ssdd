@@ -1,12 +1,13 @@
 const net = require('net');
 
 class Reloj {
-    constructor(ip, puerto, periodo) {
+    constructor(ip, puerto, periodo, verlog) {
         this.ip = ip;
         this.puerto = puerto;
         this.periodo = periodo;
         this.offset = 0;
         this.actualizarTiempo();
+        this.verlog = verlog;
     }
 
     get getIp() {
@@ -36,7 +37,8 @@ class Reloj {
         setInterval(function () {
             const client = new net.Socket();
 
-            console.log(`Reloj: actualizando tiempo con Servidor NTP en ${self.ip}:${self.puerto}`);
+            if (this.verlog == 'true')
+                console.log(`Reloj: actualizando tiempo con Servidor NTP en ${self.ip}:${self.puerto}`);
 
             client.connect(self.puerto, self.ip, function () {
                 const T1 = { t1: new Date().toISOString() }; 
@@ -52,7 +54,8 @@ class Reloj {
                 const T3 = new Date(respuesta.t3).getTime();
 
                 self.offset = ((T2 - T1) + (T3 - T4)) / 2;
-                console.log(`Reloj: offset con Servidor NTP: ${self.offset} ms.`)
+                if (this.verlog == 'true')
+                    console.log(`Reloj: offset con Servidor NTP: ${self.offset} ms.`)
                 client.destroy();
             });
 
