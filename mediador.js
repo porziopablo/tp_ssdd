@@ -1,4 +1,4 @@
-const zmq = require(zeromq);
+const zmq = require('zeromq');
 
 class Mediador {
 
@@ -9,42 +9,39 @@ class Mediador {
     }
 
     pedirAlCoord(mensaje, callback) {
-
         const requester = zmq.socket('req');
-        requester.connect("tcp://this.ipCoord:this.puertoCoord");
-        requester.on("message", function (reply) {
-            respuesta = JSON.parse(reply);
-            callback(respuesta);
-            requester.close(); //probar aca o sino antes del callback
-        })
 
-        mensaje.idPeticion = this.contador++ //posincremento 
-        requester.send(JSON.stringify(mensaje)); 
-    } 
+        requester.connect(`tcp://${this.ipCoord}:${this.puertoCoord}`);
+
+        requester.on("message", function (reply) {
+            const respuesta = JSON.parse(reply);
+            callback(respuesta);
+            requester.close();
+        });
+
+        mensaje.idPeticion = this.contador++;
+        requester.send(JSON.stringify(mensaje));
+    }
 
     iniciarSesion(mensaje) {
 
+        const self = this;
         const cb = function (resolve) {
-
             const requester = zmq.socket('req');
-            requester.connect("tcp://this.ipCoord:this.puertoCoord");
-            requester.on("message", function (reply) {
-                respuesta = JSON.parse(reply);
-                resolve(respuesta);
-                requester.close();
 
+            requester.connect(`tcp://${self.ipCoord}:${self.puertoCoord}`);
+            requester.on("message", function (reply) {
+                const respuesta = JSON.parse(reply);
+                requester.close(); // si se pone despues de resolve no se ejecuta
+                resolve(respuesta);
             });
 
-            Mensaje.idPeticion = this.contador++ //posincremento 
+            mensaje.idPeticion = self.contador++;
             requester.send(JSON.stringify(mensaje));
-
         }
 
         return new Promise(cb);
-
     }
+}
 
-} 
-
-module.exports = Mediador
-
+module.exports = Mediador;
