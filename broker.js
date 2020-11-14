@@ -19,6 +19,8 @@ function arranque() {
     BROKER_ID = process.argv[2];
 
     console.log(`Arrancando broker con ID = ${BROKER_ID}...`);
+    console.log("Usando configuracion: ", configBroker);
+
 
     reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj);  //CREO INSTANCIA DE RELOJ
     colaMensajes = new ColaMensajes(configBroker.periodoCola, configBroker.tamMaxCola, configBroker.plazoMaxCola, reloj);
@@ -47,6 +49,8 @@ subSocket.on('message', function (topicoBytes, mensaje) {
     if (topico != HEARTBEAT) {
         if (colaMensajes.almacenarMensaje(topico, JSON.parse(mensaje)))
             pubSocket.send([topico, mensaje]);
+        else
+            console.log("Mensaje descartado");
     }
     else {
         heartbeat = JSON.parse(mensaje);
@@ -98,16 +102,19 @@ responder.on('message', function (solicitudJSON) {
     let resultados = {}, error = {};
     let exito = true;
     
-    switch (solicitud.accion) {
+    switch (parseInt(solicitud.accion)) {
         case NUEVO_TOP:
             nuevoTopico(solicitud.topico); break;
         case MOSTRAR_TOP:
             resultados = { listaTopicos: colaMensajes.obtenerTopicos() }; break;
         case MOSTRAR_MSJ:
-            resultados = { mensajes: colaMensajes.obtenerMensajes(topico) };
-            if ((resultados.mensajes.length == 0) && (solicitud.topico != HEARTBEAT)) {
+            if (colaMensajes.responsableTopico(solicitud.topico)) {
+                resultados = { mensajes: colaMensajes.obtenerMensajes(solicitud.topico) };
+            }
+            else {
                 exito = false;
                 error = nuevoError(TOP_INEXISTENTE);
+                resultados = { mensajes: [] };
             }
             break;
         case BORRAR_MSJ:
