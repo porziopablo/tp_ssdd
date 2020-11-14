@@ -155,17 +155,25 @@ function grupo(idGrupo) {
          "topico": "message/"+idGrupo,
     }
 
-    function callbackGrupo(respuesta) {
-        const rtaCoord = JSON.parse(respuesta);
-        if (rtaCoord.grupoNuevo == 'true') {
+    function callbackGrupo(rtaCoord) {
+        if (rtaCoord.grupoNuevo == true) {
             logearTexto("El grupo se ha creado correctamente!"); //que pasa si tiro error?
         }
         else {
             logearTexto("Se lo ha agregado al grupo correctamente!");
         }
+
+        const brokerGrupo = rtaCoord.resultados.datosBroker[0];
+        cacheBroker.set(idGrupo, { ip: brokerGrupo.ip, puerto: brokerGrupo.puerto });
+
+        const socket = zmq.socket('sub');
+        socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
+        socket.on("message", recibirMensaje);
+        listaSockets.set(idGrupo, socket); // agrego el socket a la lista de grupos
     }
+
     logearTexto("Solicitando operacion...");
-    mediador.pedirAlCoord(request, callbackGrupo);
+    Mediador.pedirAlCoord(request, callbackGrupo);
     nuevaOperacionConsola();
 }
 
