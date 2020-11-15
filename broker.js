@@ -22,7 +22,7 @@ function arranque() {
     console.log("Usando configuracion: ", configBroker);
 
 
-    reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj);  //CREO INSTANCIA DE RELOJ
+    reloj = new Reloj(configBroker.ipNTP, configBroker.puertoNTP, configBroker.periodoReloj, "true");  //CREO INSTANCIA DE RELOJ
     colaMensajes = new ColaMensajes(configBroker.periodoCola, configBroker.tamMaxCola, configBroker.plazoMaxCola, reloj);
     listaConectados = new ListaConectados(reloj, configBroker.plazoMaxHeart, configBroker.periodoListaHeart);
 
@@ -37,6 +37,8 @@ function arranque() {
 
 function enviarMensajesAnteriores(topicoMsj, topicoCliente) {
     const mensajes = colaMensajes.obtenerMensajes(topicoMsj);
+
+    console.log(`Poniendo al dia a: ${topicoCliente} con ${topicoMsj}`);
 
     mensajes.forEach((msj) => { pubSocket.send([topicoCliente, JSON.stringify(msj)]) });
 }
