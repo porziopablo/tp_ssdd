@@ -57,11 +57,11 @@ async function arranque() {
         ipBrokerCliente = respuestaSesion.resultados.datosBroker[2].ip;
         puertoBrokerCliente = respuestaSesion.resultados.datosBroker[2].puerto;
 
-        socketAll.connect('tcp://' + ipBrokerAll + puertoBrokerAll);
+        socketAll.connect('tcp://' + ipBrokerAll + ":" + puertoBrokerAll);
         socketAll.subscribe(respuestaSesion.resultados.datosBroker[0].topico);
-        socketHeartbeat.connect('tcp://' + ipBrokerHB + puertoBrokerHB);
+        socketHeartbeat.connect('tcp://' + ipBrokerHB + ":" + puertoBrokerHB);
         socketHeartbeat.subscribe(respuestaSesion.resultados.datosBroker[1].topico);
-        socketCliente.connect('tcp://' + ipBrokerCliente + puertoBrokerCliente);
+        socketCliente.connect('tcp://' + ipBrokerCliente + ":" + puertoBrokerCliente);
         socketCliente.subscribe(respuestaSesion.resultados.datosBroker[2].topico);
 
         socketAll.on('message', recibirMensaje);
@@ -98,7 +98,7 @@ rl.on('line', function (comando) {
         else
         if (comandoAct[0] === ESCRIBIR_EN_GRUPO) {
             if (comandoAct.length === 2) {
-                perteneceAGrupo(comandoAct);
+                writeGroup(comandoAct);
             }
             else {
                 logearError("Cantidad invalida de argumentos");
@@ -123,24 +123,6 @@ rl.on('line', function (comando) {
     }
 });
 
-function perteneceAGrupo(comandoAct) {
-    const topico = comandoAct[1];
-
-    if (cacheBroker.has(topico)) {
-        let mensaje = await preguntar("Mensaje: ");
-        if (mensaje === "") {
-            logearError("No se puede enviar un mensaje vacio!")
-        }
-        else {
-            prepararMensaje("message/"+topico, mensaje);
-        }
-    }
-    else {
-        logearError("Usted no pertenece al grupo al que quiere escribir.");
-    }
-
-}
-
 function logearError(mensaje) {
     console.log("\033[31m" + mensaje + "\x1b[37m")
 }
@@ -160,7 +142,7 @@ function preguntar(pregunta) {
     });
 }
 
-function perteneceAGrupo(comandoAct) {
+async function writeGroup(comandoAct) {
     const topico = comandoAct[1];
 
     if (cacheBroker.has(topico)) {
@@ -254,10 +236,10 @@ function enviarMensaje(broker, topico, mensaje) {
 
     socket.on('connect', function (fd, ep) {
         socket.send([topico, JSON.stringify(mensaje)]);
-        sock.unmonitor();
-        sock.close();
+        socket.unmonitor();
+        socket.close();
     });
-    sock.monitor(100, 0);
+    socket.monitor(100, 0);
 }
 
 function prepararMensaje(idReceptor, stringMensaje) {
@@ -319,7 +301,7 @@ function emitirHeartbeat() {
 
     const msjHB = {
         "emisor": ID_CLIENTE,
-        "fecha": reloj.solicitarTiempo().toISOString()
+        "fecha": new Date(reloj.solicitarTiempo()).toISOString()
     }
 
     enviarMensaje(brokerHB, TOPICO_HB, msjHB);
