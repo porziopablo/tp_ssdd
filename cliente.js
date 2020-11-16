@@ -68,7 +68,21 @@ async function arranque() {
         socketHeartbeat.on('message', recibirHB);
         socketCliente.on('message', recibirMensaje);
 
-        setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
+        const request = {
+            "idPeticion": "", // este valor se setea en el mediador
+            "accion": "1",
+            "topico": TOPICO_HB,
+        }
+
+        function callback(respuesta)  // la respuesta es la del formato oficial 
+        {
+            cacheBroker.set(TOPICO_HB, {
+                "ip": rtaCoord.resultados[0].ip,
+                "puerto": rtaCoord.resultados[0].puerto
+            });
+            setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
+        }
+        mediador.pedirAlCoord(request, callback);
     }
     else {
         //hay que ver si se agrega algun error que pueda llegar aca.
@@ -151,10 +165,10 @@ function preguntar(pregunta) {
 async function writeGroup(comandoAct) {
     const topico = comandoAct[1];
 
-    if (cacheBroker.has(topico)) {
+    if (listaSockets.has(topico)) {
         let mensaje = await preguntar("Mensaje: ");
         if (mensaje === "") {
-            logearError("No se puede enviar un mensaje vacio!")
+            logearError("No se puede enviar un mensaje vacio!");
         }
         else {
             prepararMensaje("message/" + topico, mensaje);
@@ -209,29 +223,24 @@ function showusers() {
 function grupo(idGrupo) {
     const request = {
         "idPeticion": "", // este valor se setea en el mediador
-        "accion": "7",
-        "topico": "message/" + idGrupo,
+        "accion": "2",
+        "topico": PREFIJO_TOPICO + idGrupo
     }
 
     function callbackGrupo(rtaCoord) {
-        if (rtaCoord.grupoNuevo == true) {
-            logearTexto("El grupo se ha creado correctamente!");
-        }
-        else {
-            logearTexto("Se lo ha agregado al grupo correctamente!");
-        }
 
-        const brokerGrupo = rtaCoord.resultados.datosBroker[0];
-        cacheBroker.set(idGrupo, { ip: brokerGrupo.ip, puerto: brokerGrupo.puerto });
+        logearTexto("Se lo ha agregado al grupo correctamente!");
 
+        const brokerGrupo = recuperarDatos(PREFIJO_TOPICO + idGrupo, rtaCoord);
         const socket = zmq.socket('sub');
+
         socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
         socket.on("message", recibirMensaje);
         listaSockets.set(idGrupo, socket); // agrego el socket a la lista de grupos
     }
 
     logearTexto("Solicitando operacion...");
-    Mediador.pedirAlCoord(request, callbackGrupo);
+    mediador.pedirAlCoord(request, callbackGrupo);
     nuevaOperacionConsola();
 }
 
@@ -249,44 +258,33 @@ function enviarMensaje(broker, topico, mensaje) {
 }
 
 function prepararMensaje(idReceptor, stringMensaje) {
-    const horaAct = reloj.solicitarTiempo();
     const topico = PREFIJO_TOPICO + idReceptor;
     const objMensaje = {
         "emisor": ID_CLIENTE,
         "mensaje": stringMensaje,
-        "fecha": horaAct.toISOString()
-    }
-    if (topico == TOPICO_ALL) {
-        enviarMensaje({
-            "ip": ipBrokerAll,
-            "puerto": puertoBrokerAll
-        }, topico, objMensaje);
+        "fecha": new Date(reloj.solicitarTiempo()).toISOString()
+    };
+    if (cacheBroker.has(idReceptor)) {
+        enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje); 
     }
     else {
-        if (cacheBroker.has(idReceptor)) {
-            enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje); 
+        const request = {
+            "idPeticion": "", // este valor se setea en el mediador
+            "accion": "1",
+            "topico": PREFIJO_TOPICO + idReceptor,
         }
-        else {
-            const request = {
-                "idPeticion": "", // este valor se setea en el mediador
-                "accion": "1",
-                "topico": PREFIJO_TOPICO + idReceptor,
-            }
 
-            function callback(respuesta)  // la respuesta es la del formato oficial 
-            {
-                const rtaCoord = JSON.parse(respuesta);
-                cacheBroker.set(idReceptor, {
-                    "ip": rtaCoord.resultados.ip,
-                    "puerto": rtaCoord.resultados.puerto
-                }); 
-                enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje);
-            }
-            mediador.pedirAlCoord(request, callback);
+        function callback(respuesta)  // la respuesta es la del formato oficial 
+        {
+            cacheBroker.set(idReceptor, {
+                "ip": rtaCoord.resultados[0].ip,
+                "puerto": rtaCoord.resultados[0].puerto
+            }); 
+            enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje);
         }
+        mediador.pedirAlCoord(request, callback);
     }
-
-}  
+} 
 
 function recibirMensaje(topico, mensaje){
     almacenMensajes.almacenarMensaje(topico, mensaje);
