@@ -25,7 +25,6 @@ const socketAll = zmq.socket('sub'), socketHeartbeat = zmq.socket('sub'), socket
 
 const listaSockets = new Map();
 const cacheBroker = new Map(); // [idCliente, broker]
-var ipBrokerAll, ipBrokerHB, puertoBrokerAll, puertoBrokerHB, ipBrokerCliente, puertoBrokerCliente;
 var reloj;
 var almacenMensajes;
 var mediador;
@@ -50,19 +49,20 @@ async function arranque() {
 
     if (respuestaSesion.exito) {
 
-        ipBrokerAll = respuestaSesion.resultados.datosBroker[0].ip;
-        puertoBrokerAll = respuestaSesion.resultados.datosBroker[0].puerto;
-        ipBrokerHB = respuestaSesion.resultados.datosBroker[1].ip;
-        puertoBrokerHB = respuestaSesion.resultados.datosBroker[1].puerto;
-        ipBrokerCliente = respuestaSesion.resultados.datosBroker[2].ip;
-        puertoBrokerCliente = respuestaSesion.resultados.datosBroker[2].puerto;
+        let datosAll = recuperarDatos(TOPICO_ALL, respuestaSesion);
 
-        socketAll.connect('tcp://' + ipBrokerAll + ":" + puertoBrokerAll);
-        socketAll.subscribe(respuestaSesion.resultados.datosBroker[0].topico);
-        socketHeartbeat.connect('tcp://' + ipBrokerHB + ":" + puertoBrokerHB);
-        socketHeartbeat.subscribe(respuestaSesion.resultados.datosBroker[1].topico);
-        socketCliente.connect('tcp://' + ipBrokerCliente + ":" + puertoBrokerCliente);
-        socketCliente.subscribe(respuestaSesion.resultados.datosBroker[2].topico);
+        socketAll.connect('tcp://' + datosAll.ip + ":" + datosAll.puerto);
+        socketAll.subscribe(TOPICO_ALL);
+
+        let datosHB = recuperarDatos(TOPICO_HB, respuestaSesion.resultados.datosBroker);
+
+        socketHeartbeat.connect('tcp://' + datosHB.ip + ":" + datosHB.puerto);
+        socketHeartbeat.subscribe(TOPICO_HB);
+
+        let datosCliente = recuperarDatos(PREFIJO_TOPICO + ID_CLIENTE, respuestaSesion);
+
+        socketCliente.connect('tcp://' + datosCliente.ip + ":" + datosCliente.puerto);
+        socketCliente.subscribe(PREFIJO_TOPICO + ID_CLIENTE);
 
         socketAll.on('message', recibirMensaje);
         socketHeartbeat.on('message', recibirHB);
@@ -74,6 +74,12 @@ async function arranque() {
         //hay que ver si se agrega algun error que pueda llegar aca.
     }
     
+}
+
+function recuperarDatos(topico,arregloBrokers) {
+
+    return arregloBrokers.find(broker => broker.topico == topico);
+
 }
 
 const rl = readline.createInterface({
