@@ -25,7 +25,6 @@ const socketAll = zmq.socket('sub'), socketHeartbeat = zmq.socket('sub'), socket
 
 const listaSockets = new Map();
 const cacheBroker = new Map(); // [idCliente, broker]
-var ipBrokerAll, ipBrokerHB, puertoBrokerAll, puertoBrokerHB, ipBrokerCliente, puertoBrokerCliente;
 var reloj;
 var almacenMensajes;
 var mediador;
@@ -50,30 +49,51 @@ async function arranque() {
 
     if (respuestaSesion.exito) {
 
-        ipBrokerAll = respuestaSesion.resultados.datosBroker[0].ip;
-        puertoBrokerAll = respuestaSesion.resultados.datosBroker[0].puerto;
-        ipBrokerHB = respuestaSesion.resultados.datosBroker[1].ip;
-        puertoBrokerHB = respuestaSesion.resultados.datosBroker[1].puerto;
-        ipBrokerCliente = respuestaSesion.resultados.datosBroker[2].ip;
-        puertoBrokerCliente = respuestaSesion.resultados.datosBroker[2].puerto;
+        let datosAll = recuperarDatos(TOPICO_ALL, respuestaSesion);
 
-        socketAll.connect('tcp://' + ipBrokerAll + puertoBrokerAll);
-        socketAll.subscribe(respuestaSesion.resultados.datosBroker[0].topico);
-        socketHeartbeat.connect('tcp://' + ipBrokerHB + puertoBrokerHB);
-        socketHeartbeat.subscribe(respuestaSesion.resultados.datosBroker[1].topico);
-        socketCliente.connect('tcp://' + ipBrokerCliente + puertoBrokerCliente);
-        socketCliente.subscribe(respuestaSesion.resultados.datosBroker[2].topico);
+        socketAll.connect('tcp://' + datosAll.ip + ":" + datosAll.puerto);
+        socketAll.subscribe(TOPICO_ALL);
+
+        let datosHB = recuperarDatos(TOPICO_HB, respuestaSesion.resultados.datosBroker);
+
+        socketHeartbeat.connect('tcp://' + datosHB.ip + ":" + datosHB.puerto);
+        socketHeartbeat.subscribe(TOPICO_HB);
+
+        let datosCliente = recuperarDatos(PREFIJO_TOPICO + ID_CLIENTE, respuestaSesion);
+
+        socketCliente.connect('tcp://' + datosCliente.ip + ":" + datosCliente.puerto);
+        socketCliente.subscribe(PREFIJO_TOPICO + ID_CLIENTE);
 
         socketAll.on('message', recibirMensaje);
         socketHeartbeat.on('message', recibirHB);
         socketCliente.on('message', recibirMensaje);
 
-        setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
+        const request = {
+            "idPeticion": "", // este valor se setea en el mediador
+            "accion": "1",
+            "topico": TOPICO_HB,
+        }
+
+        function callback(respuesta)  // la respuesta es la del formato oficial 
+        {
+            cacheBroker.set(TOPICO_HB, {
+                "ip": rtaCoord.resultados[0].ip,
+                "puerto": rtaCoord.resultados[0].puerto
+            });
+            setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
+        }
+        mediador.pedirAlCoord(request, callback);
     }
     else {
         //hay que ver si se agrega algun error que pueda llegar aca.
     }
     
+}
+
+function recuperarDatos(topico,arregloBrokers) {
+
+    return arregloBrokers.find(broker => broker.topico == topico);
+
 }
 
 const rl = readline.createInterface({
@@ -98,7 +118,7 @@ rl.on('line', function (comando) {
         else
         if (comandoAct[0] === ESCRIBIR_EN_GRUPO) {
             if (comandoAct.length === 2) {
-                perteneceAGrupo(comandoAct);
+                writeGroup(comandoAct);
             }
             else {
                 logearError("Cantidad invalida de argumentos");
@@ -123,24 +143,6 @@ rl.on('line', function (comando) {
     }
 });
 
-function perteneceAGrupo(comandoAct) {
-    const topico = comandoAct[1];
-
-    if (cacheBroker.has(topico)) {
-        let mensaje = await preguntar("Mensaje: ");
-        if (mensaje === "") {
-            logearError("No se puede enviar un mensaje vacio!")
-        }
-        else {
-            prepararMensaje("message/"+topico, mensaje);
-        }
-    }
-    else {
-        logearError("Usted no pertenece al grupo al que quiere escribir.");
-    }
-
-}
-
 function logearError(mensaje) {
     console.log("\033[31m" + mensaje + "\x1b[37m")
 }
@@ -160,13 +162,13 @@ function preguntar(pregunta) {
     });
 }
 
-function perteneceAGrupo(comandoAct) {
+async function writeGroup(comandoAct) {
     const topico = comandoAct[1];
 
-    if (cacheBroker.has(topico)) {
+    if (listaSockets.has(topico)) {
         let mensaje = await preguntar("Mensaje: ");
         if (mensaje === "") {
-            logearError("No se puede enviar un mensaje vacio!")
+            logearError("No se puede enviar un mensaje vacio!");
         }
         else {
             prepararMensaje("message/" + topico, mensaje);
@@ -221,77 +223,68 @@ function showusers() {
 function grupo(idGrupo) {
     const request = {
         "idPeticion": "", // este valor se setea en el mediador
-        "accion": "7",
-        "topico": "message/" + idGrupo,
+        "accion": "2",
+        "topico": PREFIJO_TOPICO + idGrupo
     }
 
     function callbackGrupo(rtaCoord) {
-        if (rtaCoord.grupoNuevo == true) {
-            logearTexto("El grupo se ha creado correctamente!");
-        }
-        else {
-            logearTexto("Se lo ha agregado al grupo correctamente!");
-        }
 
-        const brokerGrupo = rtaCoord.resultados.datosBroker[0];
-        cacheBroker.set(idGrupo, { ip: brokerGrupo.ip, puerto: brokerGrupo.puerto });
+        logearTexto("Se lo ha agregado al grupo correctamente!");
 
+        const brokerGrupo = recuperarDatos(PREFIJO_TOPICO + idGrupo, rtaCoord);
         const socket = zmq.socket('sub');
+
         socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
         socket.on("message", recibirMensaje);
         listaSockets.set(idGrupo, socket); // agrego el socket a la lista de grupos
     }
 
     logearTexto("Solicitando operacion...");
-    Mediador.pedirAlCoord(request, callbackGrupo);
+    mediador.pedirAlCoord(request, callbackGrupo);
     nuevaOperacionConsola();
 }
 
 function enviarMensaje(broker, topico, mensaje) {
     const socket = zmq.socket('pub');
+
     socket.connect(`tcp://${broker.ip}:${broker.puerto}`);
-    socket.send([topico, JSON.stringify(mensaje)]);
+
+    socket.on('connect', function (fd, ep) {
+        socket.send([topico, JSON.stringify(mensaje)]);
+        socket.unmonitor();
+        socket.close();
+    });
+    socket.monitor(100, 0);
 }
 
 function prepararMensaje(idReceptor, stringMensaje) {
-    const horaAct = reloj.solicitarTiempo();
     const topico = PREFIJO_TOPICO + idReceptor;
     const objMensaje = {
         "emisor": ID_CLIENTE,
         "mensaje": stringMensaje,
-        "fecha": horaAct.toISOString()
-    }
-    if (topico == TOPICO_ALL) {
-        enviarMensaje({
-            "ip": ipBrokerAll,
-            "puerto": puertoBrokerAll
-        }, topico, objMensaje);
+        "fecha": new Date(reloj.solicitarTiempo()).toISOString()
+    };
+    if (cacheBroker.has(idReceptor)) {
+        enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje); 
     }
     else {
-        if (cacheBroker.has(idReceptor)) {
-            enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje); 
+        const request = {
+            "idPeticion": "", // este valor se setea en el mediador
+            "accion": "1",
+            "topico": PREFIJO_TOPICO + idReceptor,
         }
-        else {
-            const request = {
-                "idPeticion": "", // este valor se setea en el mediador
-                "accion": "1",
-                "topico": PREFIJO_TOPICO + idReceptor,
-            }
 
-            function callback(respuesta)  // la respuesta es la del formato oficial 
-            {
-                const rtaCoord = JSON.parse(respuesta);
-                cacheBroker.set(idReceptor, {
-                    "ip": rtaCoord.resultados.ip,
-                    "puerto": rtaCoord.resultados.puerto
-                }); 
-                enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje);
-            }
-            mediador.pedirAlCoord(request, callback);
+        function callback(respuesta)  // la respuesta es la del formato oficial 
+        {
+            cacheBroker.set(idReceptor, {
+                "ip": rtaCoord.resultados[0].ip,
+                "puerto": rtaCoord.resultados[0].puerto
+            }); 
+            enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje);
         }
+        mediador.pedirAlCoord(request, callback);
     }
-
-}  
+} 
 
 function recibirMensaje(topico, mensaje){
     almacenMensajes.almacenarMensaje(topico, mensaje);
@@ -312,7 +305,7 @@ function emitirHeartbeat() {
 
     const msjHB = {
         "emisor": ID_CLIENTE,
-        "fecha": reloj.solicitarTiempo().toISOString()
+        "fecha": new Date(reloj.solicitarTiempo()).toISOString()
     }
 
     enviarMensaje(brokerHB, TOPICO_HB, msjHB);
