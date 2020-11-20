@@ -32,7 +32,7 @@ class AlmacenBroker {
                 encontro = true;
             }
 
-            proximo = iterator.next();
+            proximo = itBroker.next();
         }
 
         return rta;
