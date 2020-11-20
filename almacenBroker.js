@@ -1,4 +1,3 @@
-const zmq = require('zeromq');
 const PUB = 'PUB';
 
 class AlmacenBroker {
