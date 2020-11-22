@@ -9,5 +9,7 @@
 	"plazoMaxCola": 10000,
 	"tamMaxCola": 50,
 	"plazoMaxHeart": 30000,
-	"periodoListaHeart": 10000
+	"periodoListaHeart": 10000,
+	"ipCoord": "192.168.0.10",
+	"puertoCoord": 3000
 }
