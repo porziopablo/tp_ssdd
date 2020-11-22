@@ -49,7 +49,7 @@ async function arranque() {
 
     if (respuestaSesion.exito) {
 
-        let datosAll = recuperarDatos(TOPICO_ALL, respuestaSesion);
+        let datosAll = recuperarDatos(TOPICO_ALL, respuestaSesion.resultados.datosBroker);
 
         socketAll.connect('tcp://' + datosAll.ip + ":" + datosAll.puerto);
         socketAll.subscribe(TOPICO_ALL);
@@ -59,7 +59,7 @@ async function arranque() {
         socketHeartbeat.connect('tcp://' + datosHB.ip + ":" + datosHB.puerto);
         socketHeartbeat.subscribe(TOPICO_HB);
 
-        let datosCliente = recuperarDatos(PREFIJO_TOPICO + ID_CLIENTE, respuestaSesion);
+        let datosCliente = recuperarDatos(PREFIJO_TOPICO + ID_CLIENTE, respuestaSesion.resultados.datosBroker);
 
         socketCliente.connect('tcp://' + datosCliente.ip + ":" + datosCliente.puerto);
         socketCliente.subscribe(PREFIJO_TOPICO + ID_CLIENTE);
