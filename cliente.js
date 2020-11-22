@@ -77,8 +77,8 @@ async function arranque() {
         function callback(respuesta)  // la respuesta es la del formato oficial 
         {
             cacheBroker.set(TOPICO_HB, {
-                "ip": rtaCoord.resultados[0].ip,
-                "puerto": rtaCoord.resultados[0].puerto
+                "ip": rtaCoord.resultados.datosBroker[0].ip,
+                "puerto": rtaCoord.resultados.datosBroker[0].puerto
             });
             setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
         }
@@ -286,9 +286,12 @@ function prepararMensaje(idReceptor, stringMensaje) {
     }
 } 
 
-function recibirMensaje(topico, mensaje){
-    almacenMensajes.almacenarMensaje(topico, mensaje);
-    logearTexto("[" + topico + " | " + mensaje.emisor + " | " + mensaje.fecha + " | " + mensaje.mensaje + "]"); //quiza convenga recortar un poco la fecha
+function recibirMensaje(topico, mensajeJSON) {
+    const mensaje = JSON.parse(mensajeJSON);
+    if (mensaje.emisor != ID_CLIENTE) {
+        almacenMensajes.almacenarMensaje(topico, mensaje);
+        logearTexto("[" + topico + " | " + mensaje.emisor + " | " + mensaje.fecha + " | " + mensaje.mensaje + "]"); //quiza convenga recortar un poco la fecha
+    }
 }
 
 
