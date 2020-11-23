@@ -37,6 +37,10 @@ class ListaConectados {
     obtenerLista() {
         return this.clientes.entries();
     }
+
+    existeCliente(idCliente) {
+        return this.clientes.has(idCliente);
+    }
 }
 
 module.exports = ListaConectados;
