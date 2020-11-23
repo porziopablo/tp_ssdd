@@ -26,9 +26,9 @@ class AlmacenBroker {
             topicos = proximo.value.listaTopicos;
             if (topicos.includes(topico)) {
                 if (tipoPuerto == PUB)
-                    rta = { "ip": proximo.value.ipBroker, "puerto": proximo.value.puertoPub };
+                    rta = { "topico": topico,"ip": proximo.value.ipBroker, "puerto": proximo.value.puertoPub };
                 else
-                    rta = { "ip": proximo.value.ipBroker, "puerto": proximo.value.puertoSub };
+                    rta = { "topico": topico,"ip": proximo.value.ipBroker, "puerto": proximo.value.puertoSub };
                 encontro = true;
             }
 
@@ -48,10 +48,10 @@ class AlmacenBroker {
         else
             this.prox++;
         if (tipoPuerto == PUB) {
-            rta = { "ip": brokerElegido.ipBroker, "puertoRep": brokerElegido.puertoRep, "puerto": brokerElegido.puertoPub }
+            rta = { "topico": topico,"ip": brokerElegido.ipBroker, "puertoRep": brokerElegido.puertoRep, "puerto": brokerElegido.puertoPub }
         }
         else
-            rta = { "ip": brokerElegido.ipBroker, "puertoRep": brokerElegido.puertoRep, "puerto": brokerElegido.puertoSub }
+            rta = { "topico": topico,"ip": brokerElegido.ipBroker, "puertoRep": brokerElegido.puertoRep, "puerto": brokerElegido.puertoSub }
         return rta;
     }
 }

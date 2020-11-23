@@ -42,7 +42,7 @@ async function arranque() {
     const msjInicioSesion = {
         "idPeticion": "",
         "accion": "2",
-        "topico": ID_CLIENTE
+        "topico": PREFIJO_TOPICO + ID_CLIENTE
     }
 
     let respuestaSesion = await mediador.iniciarSesion(msjInicioSesion);
@@ -171,7 +171,7 @@ async function writeGroup(comandoAct) {
             logearError("No se puede enviar un mensaje vacio!");
         }
         else {
-            prepararMensaje("message/" + topico, mensaje);
+            prepararMensaje(topico, mensaje);
         }
     }
     else {
@@ -182,15 +182,24 @@ async function writeGroup(comandoAct) {
 
 async function write(comandoAct) {
     if (comandoAct.length === 2) {
+
         const idReceptor = comandoAct[1];
-        let mensaje = await preguntar("Mensaje: ");
-        if (mensaje === "") {
-            logearError("No se puede enviar un mensaje vacio!")
+
+        if (listaConectados.existeCliente(idReceptor)) {
+
+
+            let mensaje = await preguntar("Mensaje: ");
+            if (mensaje === "") {
+                logearError("No se puede enviar un mensaje vacio!")
+            }
+            else {
+                prepararMensaje(idReceptor, mensaje);
+            }
         }
         else {
-            prepararMensaje(idReceptor, mensaje);
+            logearError("El cliente " + idReceptor + " no existe.");
         }
-     }
+    }
     else {
         logearError("Cantidad invalida de argumentos");
     }
@@ -231,7 +240,7 @@ function grupo(idGrupo) {
 
         logearTexto("Se lo ha agregado al grupo correctamente!");
 
-        const brokerGrupo = recuperarDatos(PREFIJO_TOPICO + idGrupo, rtaCoord);
+        const brokerGrupo = recuperarDatos(PREFIJO_TOPICO + idGrupo, rtaCoord.resultados.datosBroker);
         const socket = zmq.socket('sub');
 
         socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
