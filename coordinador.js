@@ -13,6 +13,8 @@ const SUB = 'SUB';
 const TOPICO_HB = "heartbeat";
 const TOPICO_ALL = "message/all";
 const PREFIJO_TOPICO = "message/";
+const TOP_INEXISTENTE = 1, OP_INEXISTENTE = 2; /* CODIGOS DE ERROR */
+
 
 function arranque() {
     almacenBroker = new AlmacenBroker(configCoord.datosBroker);
@@ -28,20 +30,20 @@ function Respuesta(exito, accion, idPeticion, resultados, error) {
     this.error = error;
 }
 
-function atencionAlCliente(solicitudJSON){
+async function atencionAlCliente(solicitudJSON){
     const solicitud = JSON.parse(solicitudJSON);
     let resultados = {}, error = {};
     let exito = true;
     switch (parseInt(solicitud.accion)) {
         case PEDIDO_PUB:
-            const broker = obtenerBroker(solicitud.topico, PUB);
+            const broker = await obtenerBroker(solicitud.topico, PUB);
             resultados = {
                 "datosBroker": [broker]
             };
         case NUEVA_ALTA:
-            const brokerAll = obtenerBroker(TOPICO_ALL, SUB);
-            const brokerHB = obtenerBroker(TOPICO_HB, SUB);
-            const brokerCli = obtenerBroker(PREFIJO_TOPICO + solicitud.topico, SUB);
+            const brokerAll = await obtenerBroker(TOPICO_ALL, SUB);
+            const brokerHB = await obtenerBroker(TOPICO_HB, SUB);
+            const brokerCli = await obtenerBroker(PREFIJO_TOPICO + solicitud.topico, SUB);
             resultados = {
                 "datosBroker": [brokerAll, brokerHB, brokerCli]
             };
