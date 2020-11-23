@@ -77,8 +77,8 @@ async function arranque() {
         function callback(respuesta)  // la respuesta es la del formato oficial 
         {
             cacheBroker.set(TOPICO_HB, {
-                "ip": rtaCoord.resultados[0].ip,
-                "puerto": rtaCoord.resultados[0].puerto
+                "ip": respuesta.resultados.datosBroker[0].ip,
+                "puerto": respuesta.resultados.datosBroker[0].puerto
             });
             setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
         }
@@ -277,8 +277,8 @@ function prepararMensaje(idReceptor, stringMensaje) {
         function callback(respuesta)  // la respuesta es la del formato oficial 
         {
             cacheBroker.set(idReceptor, {
-                "ip": rtaCoord.resultados[0].ip,
-                "puerto": rtaCoord.resultados[0].puerto
+                "ip": respuesta.resultados.datosBroker[0].ip,
+                "puerto": respuesta.resultados.datosBroker[0].puerto
             }); 
             enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje);
         }
@@ -286,9 +286,12 @@ function prepararMensaje(idReceptor, stringMensaje) {
     }
 } 
 
-function recibirMensaje(topico, mensaje){
-    almacenMensajes.almacenarMensaje(topico, mensaje);
-    logearTexto("[" + topico + " | " + mensaje.emisor + " | " + mensaje.fecha + " | " + mensaje.mensaje + "]"); //quiza convenga recortar un poco la fecha
+function recibirMensaje(topico, mensajeJSON) {
+    const mensaje = JSON.parse(mensajeJSON);
+    if (mensaje.emisor != ID_CLIENTE) {
+        almacenMensajes.almacenarMensaje(topico, mensaje);
+        logearTexto("[" + topico + " | " + mensaje.emisor + " | " + mensaje.fecha + " | " + mensaje.mensaje + "]"); //quiza convenga recortar un poco la fecha
+    }
 }
 
 
@@ -298,17 +301,13 @@ function recibirHB(topico, mensaje) {
 }
 
 function emitirHeartbeat() {
-    const brokerHB = {
-        "ip": ipBrokerHB,
-        "puerto": puertoBrokerHB
-    }
 
     const msjHB = {
         "emisor": ID_CLIENTE,
         "fecha": new Date(reloj.solicitarTiempo()).toISOString()
     }
 
-    enviarMensaje(brokerHB, TOPICO_HB, msjHB);
+    enviarMensaje(cacheBroker.get(TOPICO_HB), TOPICO_HB, msjHB);
 }
 
 arranque();
