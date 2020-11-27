@@ -27,7 +27,7 @@ class ListaConectados {
         }
 
         const control = function () {
-            console.log("Lista: Controlando estado de clientes...");
+            //console.log("Lista: Controlando estado de clientes...");
             self.clientes.forEach(estaDesconectado);
         }
 
@@ -36,6 +36,10 @@ class ListaConectados {
 
     obtenerLista() {
         return this.clientes.entries();
+    }
+
+    existeCliente(idCliente) {
+        return this.clientes.has(idCliente);
     }
 }
 

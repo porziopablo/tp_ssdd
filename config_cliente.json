@@ -1,10 +1,10 @@
 {
-  "ipNTP": "192.168.0.9",
+  "ipNTP": "127.0.0.1",
   "puertoNTP": "2000",
   "periodoReloj": 7000,
   "plazoMaxHeart": 30000,
   "periodoListaHeart": 10000,
   "periodoHeartbeat": 10000,
-  "ipCoordinador": "192.168.0.9",
-  "puertoCoordinador": "10"
+  "ipCoordinador": "127.0.0.1",
+  "puertoCoordinador": "123"
 }

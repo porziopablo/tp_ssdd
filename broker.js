@@ -144,7 +144,7 @@ function pedirHeartbeat() {
     const mensaje = {
         idPeticion: 0,
         accion: SUB_ALTA,
-        topico: HEARTBEAT
+        topico: BROKER_ID
     };  
 
     requester.connect(`tcp://${configBroker.ipCoord}:${configBroker.puertoCoord}`);

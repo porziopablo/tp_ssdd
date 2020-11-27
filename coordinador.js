@@ -36,19 +36,22 @@ async function atencionAlCliente(solicitudJSON){
     let exito = true;
     switch (parseInt(solicitud.accion)) {
         case PEDIDO_PUB:
-            const broker = await obtenerBroker(solicitud.topico, PUB);
+            const broker = await obtenerBroker(solicitud.topico, SUB); //pido el de suscripcion del broker
             resultados = {
                 "datosBroker": [broker]
             };
+            break;
         case NUEVA_ALTA:
-            const brokerAll = await obtenerBroker(TOPICO_ALL, SUB);
-            const brokerHB = await obtenerBroker(TOPICO_HB, SUB);
-            const brokerCli = await obtenerBroker(PREFIJO_TOPICO + solicitud.topico, SUB);
+            const brokerAll = await obtenerBroker(TOPICO_ALL, PUB);//pido el de publicacion del broker
+            const brokerHB = await obtenerBroker(TOPICO_HB, PUB);//pido el de publicacion del broker
+            const brokerCli = await obtenerBroker(solicitud.topico, PUB);//pido el de publicacion del broker
             resultados = {
                 "datosBroker": [brokerAll, brokerHB, brokerCli]
             };
+            break;
         default:
             exito = false; error = nuevoError(OP_INEXISTENTE);
+            break;
     }
     responder.send(JSON.stringify(new Respuesta(exito, solicitud.accion, solicitud.idPeticion, resultados, error)));
 }

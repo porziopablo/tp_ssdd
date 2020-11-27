@@ -42,7 +42,7 @@ async function arranque() {
     const msjInicioSesion = {
         "idPeticion": "",
         "accion": "2",
-        "topico": ID_CLIENTE
+        "topico": PREFIJO_TOPICO + ID_CLIENTE
     }
 
     let respuestaSesion = await mediador.iniciarSesion(msjInicioSesion);
@@ -77,8 +77,8 @@ async function arranque() {
         function callback(respuesta)  // la respuesta es la del formato oficial 
         {
             cacheBroker.set(TOPICO_HB, {
-                "ip": rtaCoord.resultados.datosBroker[0].ip,
-                "puerto": rtaCoord.resultados.datosBroker[0].puerto
+                "ip": respuesta.resultados.datosBroker[0].ip,
+                "puerto": respuesta.resultados.datosBroker[0].puerto
             });
             setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
         }
@@ -171,7 +171,7 @@ async function writeGroup(comandoAct) {
             logearError("No se puede enviar un mensaje vacio!");
         }
         else {
-            prepararMensaje("message/" + topico, mensaje);
+            prepararMensaje(topico, mensaje);
         }
     }
     else {
@@ -182,15 +182,24 @@ async function writeGroup(comandoAct) {
 
 async function write(comandoAct) {
     if (comandoAct.length === 2) {
+
         const idReceptor = comandoAct[1];
-        let mensaje = await preguntar("Mensaje: ");
-        if (mensaje === "") {
-            logearError("No se puede enviar un mensaje vacio!")
+
+        if (listaConectados.existeCliente(idReceptor)) {
+
+
+            let mensaje = await preguntar("Mensaje: ");
+            if (mensaje === "") {
+                logearError("No se puede enviar un mensaje vacio!")
+            }
+            else {
+                prepararMensaje(idReceptor, mensaje);
+            }
         }
         else {
-            prepararMensaje(idReceptor, mensaje);
+            logearError("El cliente " + idReceptor + " no existe.");
         }
-     }
+    }
     else {
         logearError("Cantidad invalida de argumentos");
     }
@@ -231,7 +240,7 @@ function grupo(idGrupo) {
 
         logearTexto("Se lo ha agregado al grupo correctamente!");
 
-        const brokerGrupo = recuperarDatos(PREFIJO_TOPICO + idGrupo, rtaCoord);
+        const brokerGrupo = recuperarDatos(PREFIJO_TOPICO + idGrupo, rtaCoord.resultados.datosBroker);
         const socket = zmq.socket('sub');
 
         socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
@@ -277,8 +286,8 @@ function prepararMensaje(idReceptor, stringMensaje) {
         function callback(respuesta)  // la respuesta es la del formato oficial 
         {
             cacheBroker.set(idReceptor, {
-                "ip": rtaCoord.resultados[0].ip,
-                "puerto": rtaCoord.resultados[0].puerto
+                "ip": respuesta.resultados.datosBroker[0].ip,
+                "puerto": respuesta.resultados.datosBroker[0].puerto
             }); 
             enviarMensaje(cacheBroker.get(idReceptor), topico, objMensaje);
         }
@@ -301,17 +310,13 @@ function recibirHB(topico, mensaje) {
 }
 
 function emitirHeartbeat() {
-    const brokerHB = {
-        "ip": ipBrokerHB,
-        "puerto": puertoBrokerHB
-    }
 
     const msjHB = {
         "emisor": ID_CLIENTE,
         "fecha": new Date(reloj.solicitarTiempo()).toISOString()
     }
 
-    enviarMensaje(brokerHB, TOPICO_HB, msjHB);
+    enviarMensaje(cacheBroker.get(TOPICO_HB), TOPICO_HB, msjHB);
 }
 
 arranque();

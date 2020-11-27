@@ -1,0 +1,20 @@
+{
+  "puertoServidor": 80,
+  "datosBroker": [
+    {
+      "id": "BROKER_1",
+      "ip": "192.168.0.9",
+      "puerto": 1330
+    },
+    {
+      "id": "BROKER_2",
+      "ip": "192.168.0.10",
+      "puerto": 1340
+    },
+    {
+      "id": "BROKER_3",
+      "ip": "192.168.0.11",
+      "puerto": 1350
+    }
+  ]
+}

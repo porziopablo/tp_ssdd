@@ -1,15 +1,15 @@
 {
-	"puertoREP": "1310",
-	"puertoPUB": "1320",
-	"puertoSUB": "1330",
-	"ipNTP": "192.168.0.9",
-	"puertoNTP": "2000",
-	"periodoReloj": 7000,
-	"periodoCola": 4000,
-	"plazoMaxCola": 10000,
-	"tamMaxCola": 50,
-	"plazoMaxHeart": 30000,
-	"periodoListaHeart": 10000,
-	"ipCoord": "192.168.0.10",
-	"puertoCoord": 3000
+  "puertoREP": "1330",
+  "puertoPUB": "1310",
+  "puertoSUB": "1320",
+  "ipNTP": "192.168.0.9",
+  "puertoNTP": "2000",
+  "periodoReloj": 7000,
+  "periodoCola": 4000,
+  "plazoMaxCola": 10000,
+  "tamMaxCola": 50,
+  "plazoMaxHeart": 30000,
+  "periodoListaHeart": 10000,
+  "ipCoord": "192.168.0.9",
+  "puertoCoord": "3000"
 }
