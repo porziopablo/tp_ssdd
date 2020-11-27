@@ -1,8 +1,8 @@
 {
-  "puertoREP": "40",
-  "puertoPUB": "20",
-  "puertoSUB": "30",
-  "ipNTP": "127.0.0.1",
+  "puertoREP": "1330",
+  "puertoPUB": "1310",
+  "puertoSUB": "1320",
+  "ipNTP": "192.168.0.9",
   "puertoNTP": "2000",
   "periodoReloj": 7000,
   "periodoCola": 4000,
@@ -10,6 +10,6 @@
   "tamMaxCola": 50,
   "plazoMaxHeart": 30000,
   "periodoListaHeart": 10000,
-  "ipCoord": "127.0.0.1",
-  "puertoCoord": "123"
+  "ipCoord": "192.168.0.9",
+  "puertoCoord": "3000"
 }
