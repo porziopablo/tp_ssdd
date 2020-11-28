@@ -138,10 +138,23 @@ rl.on('line', function (comando) {
         }
     }
     else {
-        //cerrar todo socket, etc...
-        rl.close();
+        cerrar();
     }
 });
+
+function cerrar() {
+
+    rl.close();
+
+    socketAll.close();
+    socketHeartbeat.close();
+    socketCliente.close();
+
+    Array.from(listaSockets.values()).forEach((socket) => { socket.close() });
+
+    logearTexto(`Hasta luego ${ID_CLIENTE}!`);
+    //process.exit(); // con esto funciona, pero seria mas prolijo lograr que los socket se cierren naturalmente
+}
 
 function logearError(mensaje) {
     console.log("\033[31m" + mensaje + "\x1b[37m")
@@ -223,7 +236,10 @@ function showusers() {
     console.log("Usuarios conectados: ");
     console.log('\x1b[33m%s\x1b[0m', " ");
     for (let [key, value] of listaUsuarios) {
-        console.log(key + " - " + value)
+        if (value.online)
+            console.log(key + " - ONLINE");
+        else
+            console.log(key + " - OFFLINE");
     }
     console.log('\x1b[33m%s\x1b[0m', "/*---------------------------------------*/");
     nuevaOperacionConsola();
@@ -244,6 +260,7 @@ function grupo(idGrupo) {
         const socket = zmq.socket('sub');
 
         socket.connect(`tcp://${brokerGrupo.ip}:${brokerGrupo.puerto}`);
+        socket.subscribe(PREFIJO_TOPICO + idGrupo);
         socket.on("message", recibirMensaje);
         listaSockets.set(idGrupo, socket); // agrego el socket a la lista de grupos
     }

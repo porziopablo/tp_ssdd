@@ -20,6 +20,8 @@ function arranque() {
     almacenBroker = new AlmacenBroker(configCoord.datosBroker);
     responder.bind('tcp://*:' + configCoord.puertoClientes);
     responder.on('message', atencionAlCliente);
+    console.log('Coordinador atendiendo en puerto: ', configCoord.puertoClientes);
+    console.log('Usando configuracion: ', configCoord);
 }
 
 function Respuesta(exito, accion, idPeticion, resultados, error) {
