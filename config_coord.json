@@ -1,26 +1,26 @@
 {
-  "puertoClientes": "123",
+  "puertoClientes": "3000",
   "datosBroker": [
     {
-      "idBroker": "123",
+      "idBroker": "BROKER_1",
       "ipBroker": "127.0.0.1",
-      "puertoPub": "20",
-      "puertoSub": "30",
+      "puertoPub": "30",
+      "puertoSub": "20",
       "puertoRep": "40"
     },
     {
-      "idBroker": "123",
+      "idBroker": "BROKER_1",
       "ipBroker": "127.0.0.1",
-      "puertoPub": "20",
-      "puertoSub": "30",
+      "puertoPub": "30",
+      "puertoSub": "20",
       "puertoRep": "40"
     },
     {
-      "idBroker": "123",
+      "idBroker": "BROKER_3",
       "ipBroker": "127.0.0.1",
-      "puertoPub": "20",
-      "puertoSub": "30",
-      "puertoRep": "40"
+      "puertoPub": "31",
+      "puertoSub": "21",
+      "puertoRep": "41"
     }
   ]
 }
