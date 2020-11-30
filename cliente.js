@@ -20,6 +20,7 @@ const UNIRSE_GRUPO = "group";
 const TOPICO_HB = "heartbeat";
 const TOPICO_ALL = "message/all";
 const PREFIJO_TOPICO = "message/";
+const PREFIJO_GRUPO = "g_";
 
 const socketAll = zmq.socket('sub'), socketHeartbeat = zmq.socket('sub'), socketCliente = zmq.socket('sub');
 
@@ -127,7 +128,7 @@ rl.on('line', function (comando) {
         else
         if (comandoAct[0] === UNIRSE_GRUPO) {
             if (comandoAct.length === 2) {
-                grupo(comandoAct[1]);
+                grupo(PREFIJO_GRUPO + comandoAct[1]);
             }
             else {
                 logearError("Cantidad invalida de argumentos");
@@ -176,7 +177,7 @@ function preguntar(pregunta) {
 }
 
 async function writeGroup(comandoAct) {
-    const topico = comandoAct[1];
+    const topico = PREFIJO_GRUPO + comandoAct[1];
 
     if (listaSockets.has(topico)) {
         let mensaje = await preguntar("Mensaje: ");
