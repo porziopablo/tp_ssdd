@@ -6,5 +6,5 @@
   "periodoListaHeart": 10000,
   "periodoHeartbeat": 10000,
   "ipCoordinador": "127.0.0.1",
-  "puertoCoordinador": "123"
+  "puertoCoordinador": "3000"
 }
