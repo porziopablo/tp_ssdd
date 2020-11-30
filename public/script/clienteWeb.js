@@ -4,6 +4,7 @@ const OK = 200, OP_INV = 403, PATH_NF = 404;
 //A falta de otra cosa:
 var brokerAct; 
 var topicoAct;
+const PATH = window.location.origin;
 
 /* FUNCIONES CALLBACK */
 
@@ -65,18 +66,18 @@ function mostrarTopicos(idBroker) {
     document.getElementById("CartelSeleccioneB").style.display = "none";
     document.getElementById('nombreBroker').innerHTML = ("Lista de topicos de " + idBroker);
     brokerAct = idBroker;
-    httpGetAsync(`http://localhost:80/broker/${idBroker}/topics`, callBackTopicos);
+    httpGetAsync(`${PATH}/broker/${idBroker}/topics`, callBackTopicos);
 }
 
 function mostrarMensajes(idBroker, topico) {
     topicoAct = topico;
     document.getElementById('nombreTopico').innerHTML = ("Lista de mensajes de " + topico);
-    httpGetAsync(`http://localhost:80/broker/${idBroker}/topics/${topico}`, callBackMensajes);
+    httpGetAsync(`${PATH}/broker/${idBroker}/topics/${topico}`, callBackMensajes);
 }
 
 function eliminarMensajes(idBroker, topico) {
 
-    httpDeleteAsync(`http://localhost:80/broker/${idBroker}/topics/${topico}`, callBackElimMensajes)
+    httpDeleteAsync(`${PATH}/broker/${idBroker}/topics/${topico}`, callBackElimMensajes)
 }
 
 
