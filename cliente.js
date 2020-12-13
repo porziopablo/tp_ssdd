@@ -81,13 +81,12 @@ async function arranque() {
                 "ip": respuesta.resultados.datosBroker[0].ip,
                 "puerto": respuesta.resultados.datosBroker[0].puerto
             });
+            emitirHeartbeat();
             setInterval(emitirHeartbeat, configCliente.periodoHeartbeat);
         }
         mediador.pedirAlCoord(request, callback);
     }
-    else {
-        //hay que ver si se agrega algun error que pueda llegar aca.
-    }
+
     
 }
 
@@ -324,7 +323,7 @@ function recibirHB(topico, mensaje) {
 }
 
 function emitirHeartbeat() {
-
+    
     const msjHB = {
         "emisor": ID_CLIENTE,
         "fecha": new Date(reloj.solicitarTiempo()).toISOString()
