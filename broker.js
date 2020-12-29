@@ -17,7 +17,7 @@ let socketHB;
 const BROKER_ID = process.argv[2];
 let reloj, colaMensajes, listaConectados;
 
-/* INICIO */
+/* INICIO */ 
 
 function arranque() {
 
@@ -170,3 +170,5 @@ function pedirHeartbeat() {
 } 
 
 arranque();
+
+/* probando vs code */
